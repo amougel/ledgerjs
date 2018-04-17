@@ -734,7 +734,8 @@ btc.signP2SHTransaction(
     associatedKeysets: string[],
     outputScriptHex: string,
     lockTime?: number = DEFAULT_LOCKTIME,
-    sigHashType?: number = SIGHASH_ALL
+    sigHashType?: number = SIGHASH_ALL,
+    segwit?: boolean = false
   ) {
     // Inputs are provided as arrays of [transaction, output_index, redeem script, optional sequence]
     // associatedKeysets are provided as arrays of [path]
@@ -752,11 +753,14 @@ btc.signP2SHTransaction(
       version: defaultVersion
     };
 
+    const getTrustedInputCall = segwit
+      ? this.getTrustedInputBIP143.bind(this)
+      : this.getTrustedInput.bind(this);
     const outputScript = Buffer.from(outputScriptHex, "hex");
 
     return foreach(inputs, input =>
       doIf(!resuming, () =>
-        this.getTrustedInput(input[1], input[0]).then(trustedInput => {
+        getTrustedInputCall(input[1], input[0]).then(trustedInput => {
           let inputItem = {};
           inputItem.trustedInput = false;
           inputItem.value = Buffer.from(trustedInput, "hex").slice(4, 4 + 0x24);
@@ -798,7 +802,7 @@ btc.signP2SHTransaction(
             firstRun,
             targetTransaction,
             trustedInputs,
-            false
+            segwit
           )
             .then(() => this.hashOutputFull(outputScript))
             .then(() =>
