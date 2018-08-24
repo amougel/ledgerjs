@@ -525,7 +525,8 @@ btc.createPaymentTransactionNew(
   ) {
     const hasTimestamp = initialTimestamp !== undefined;
     let startTime = Date.now();
-    let useBip143 =
+    const nativeSegwit = !!additionals && additionals.includes("nativeSegwit");
+    const useBip143 =
       segwit ||
       (!!additionals &&
         (additionals.includes("abc") ||
@@ -714,11 +715,12 @@ btc.createPaymentTransactionNew(
         // Populate the final input scripts
         for (let i = 0; i < inputs.length; i++) {
           if (segwit) {
-            targetTransaction.witness = Buffer.alloc(0);
-            targetTransaction.inputs[i].script = Buffer.concat([
-              Buffer.from("160014", "hex"),
-              this.hashPublicKey(publicKeys[i])
-            ]);
+            if (!nativeSegwit) {
+              targetTransaction.inputs[i].script = Buffer.concat([
+                Buffer.from("160014", "hex"),
+                this.hashPublicKey(publicKeys[i])
+              ]);
+            }
           } else {
             const signatureSize = Buffer.alloc(1);
             const keySize = Buffer.alloc(1);
